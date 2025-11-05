@@ -42,7 +42,8 @@ common warnings
 library
     hs-source-dirs:   src
     build-depends:
-        base
+        base,
+        ghc-experimental
     default-language: GHC2021
     exposed-modules:
         Lib
@@ -64,9 +65,13 @@ executable test
     -- Other library packages from which modules are imported.
     build-depends:
         base,
-        test
+        test,
+        ghc-experimental
     -- Directories containing source files.
     hs-source-dirs:   app
 
     -- Base language which the package is written in.
     default-language: GHC2021
+
+    -- GHC options for reactor module: disable Haskell main, use reactor model, export main symbol
+    ghc-options: -no-hs-main -optl-mexec-model=reactor -optl-Wl,--export=main

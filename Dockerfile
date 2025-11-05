@@ -36,6 +36,8 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       libgmp-dev \
       jq \
       zstd \
+      nodejs \
+      npm \
       && \
     apt-get autoremove -y && \
     apt-get clean -y && \
@@ -100,8 +102,19 @@ RUN source /home/$USER_NAME/.ghc-wasm/env && \
           --with-haddock=/home/$USER_NAME/.ghc-wasm/wasm32-wasi-ghc/bin/wasm32-wasi-haddock \
           build all --project-file=cabal.project --project-dir=/app
 
+# Generate ghc_wasm_jsffi.js from the compiled wasm file
+RUN source /home/$USER_NAME/.ghc-wasm/env && \
+    WASM_FILE=$(find dist-newstyle -name "test.wasm" -type f | head -n 1) && \
+    if [ -n "$WASM_FILE" ]; then \
+        LIBDIR=$(wasm32-wasi-ghc --print-libdir) && \
+        node "$LIBDIR/post-link.mjs" -i "$WASM_FILE" -o /app/ghc_wasm_jsffi.js; \
+    else \
+        echo "Warning: test.wasm not found, skipping JSFFI generation"; \
+    fi
+
 # Copy the scripts, datasets, tests, and extra files
 COPY --chown=${UID}:${GID} LICENSE README.md /app/
 
+USER root
 # Default command
 CMD ["/bin/bash"]
