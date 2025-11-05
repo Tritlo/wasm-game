@@ -1,0 +1,64 @@
+cabal-version:      3.14
+name:               test
+version:            0.3.0.0
+synopsis:           Haskell wasm test
+
+-- A longer description of the package.
+description:
+    This is a test package for the Haskell wasm toolchain.
+-- The license under which the package is released.
+license:            MIT
+
+-- The file containing the license text.
+license-file:       LICENSE
+
+-- The package author(s).
+author:             Matthias Pall Gissurarson
+
+-- An email address to which users can send suggestions, bug reports, and patches.
+maintainer:         matti@tharkun.se
+
+-- A copyright notice.
+-- copyright:
+category:           Development
+build-type:         Simple
+
+-- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
+extra-doc-files:    CHANGELOG.md
+
+-- Extra source files to be distributed with the package, such as examples, or a tutorial module.
+extra-source-files:
+    README.md
+
+homepage:       https://github.com/Tharkun/test
+
+source-repository head
+  type:     git
+  location: https://github.com/TharkunAB/test.git
+
+common warnings
+    ghc-options: -Wall
+
+
+executable test
+    -- Import common warning flags.
+    import:           warnings
+
+    -- .hs or .lhs file containing the Main module.
+    main-is:          Test.hs
+
+    -- Modules included in this executable, other than Main.
+    -- other-modules:
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+
+    -- Other library packages from which modules are imported.
+    build-depends:
+        base
+
+    -- Directories containing source files.
+    hs-source-dirs:   app
+
+    -- Base language which the package is written in.
+    default-language: GHC2021
