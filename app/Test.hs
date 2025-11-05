@@ -1,4 +1,5 @@
 module Main where
+import Lib
 
 main :: IO ()
-main = print "hello, wasm world!"
+main = print "hello, wasm world!" >> print (Lib.succ 1)

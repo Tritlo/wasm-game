@@ -39,6 +39,14 @@ source-repository head
 common warnings
     ghc-options: -Wall
 
+library
+    hs-source-dirs:   src
+    build-depends:
+        base
+    default-language: GHC2021
+    exposed-modules:
+        Lib
+
 
 executable test
     -- Import common warning flags.
@@ -55,8 +63,8 @@ executable test
 
     -- Other library packages from which modules are imported.
     build-depends:
-        base
-
+        base,
+        test
     -- Directories containing source files.
     hs-source-dirs:   app
 
