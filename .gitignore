@@ -2,3 +2,4 @@
 *.o
 dist-newstyle
 *.wasm
+*.js
