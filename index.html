@@ -50,6 +50,16 @@
       opacity: 0.95;
     }
 
+    .header p a {
+      color: white;
+      text-decoration: underline;
+      opacity: 0.9;
+    }
+
+    .header p a:hover {
+      opacity: 1;
+    }
+
     .github-link {
       display: inline-flex;
       align-items: center;
@@ -114,9 +124,9 @@
     <div class="header">
       <h1>GHC WASM Game</h1>
       <p>
-        This demo showcases running Haskell code compiled to WebAssembly using GHC WASM.
-        GHC WASM allows you to compile Haskell programs to WebAssembly, enabling functional
-        programming in the browser with full access to JavaScript APIs through FFI.
+        This demo showcases running Haskell code compiled to WebAssembly using the <a href="https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta" target="_blank" rel="noopener noreferrer">GHC WASM backend</a>.
+        The GHC WASM backend allows you to compile Haskell programs to WebAssembly, enabling functional
+        programming in the browser with full access to JavaScript APIs through FFI, in this case to <a href="https://pixijs.com/" target="_blank" rel="noopener noreferrer">pixi.js</a>.
       </p>
       <a href="https://github.com/Tritlo/wasm-game" target="_blank" rel="noopener noreferrer" class="github-link">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
