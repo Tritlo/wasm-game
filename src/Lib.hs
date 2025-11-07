@@ -10,6 +10,8 @@ type JSFunction = JSVal
 foreign import javascript unsafe "new Application()"
    newApp :: IO JSVal
 
+-- We use a safe import here because we want to await the result of the initApp function.
+-- init has a side-effect on app, which we need to capture.
 foreign import javascript safe
  """
   const r = await $1.init({background: $2, resizeTo: window});
@@ -45,6 +47,9 @@ foreign import javascript unsafe "$1($2)"
 foreign import javascript unsafe "$1.ticker.add($2)"
     addTicker :: JSVal -> JSFunction -> IO ()
 
+-- *****************************************************************************
+-- * Utils
+-- ****************************************************************************
 foreign import javascript "wrapper"
   jsFuncFromHs :: (JSVal -> IO JSVal) -> IO JSVal
 

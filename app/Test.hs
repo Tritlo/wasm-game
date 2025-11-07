@@ -22,14 +22,10 @@ main = do
     screen <- getProperty "screen" app
     screen_width <- valAsInt <$> getProperty "width" screen
     screen_height <- valAsInt <$> getProperty "height" screen
-    texture <- loadAsset $ toJSString "assets/bunny.png"
-    sprite <- newSprite texture
-    consoleLogShow screen_width
-    consoleLogShow screen_height
+    sprite <- loadAsset "https://pixijs.com/assets/bunny.png" >>= newSprite
     setAnchor sprite 0.5
     setProperty "x" sprite (floatAsVal (fromIntegral screen_width / 2.0))
     setProperty "y" sprite (floatAsVal (fromIntegral screen_height / 2.0))
     addChild app sprite
-    func <- jsFuncFromHs (rotateSprite sprite)
-    addTicker app func
+    addTicker app =<< jsFuncFromHs (rotateSprite sprite)
     return ()
