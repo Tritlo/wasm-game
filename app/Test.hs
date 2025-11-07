@@ -178,11 +178,13 @@ fallSprite ball_state_ref score_state_ref screen sprite bottom_paddle top_paddle
     -- Handle scoring
     case scoring_event of
         Just True -> do  -- Player scored
+            blipWithFreq 800.0
             score <- readIORef score_state_ref
             let new_score = score { playerScore = score.playerScore + 1 }
             writeIORef score_state_ref new_score
             updateScoreDisplay new_score score_text
         Just False -> do  -- Computer scored
+            blipWithFreq 200.0
             score <- readIORef score_state_ref
             let new_score = score { computerScore = score.computerScore + 1 }
             writeIORef score_state_ref new_score
