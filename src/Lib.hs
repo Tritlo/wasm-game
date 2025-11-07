@@ -139,6 +139,7 @@ foreign import javascript unsafe "$1.anchor.set($2)"
 foreign import javascript unsafe "$1.stage.addChild($2)"
     addChild :: JSVal -> JSVal -> IO ()
 
+
 -- *****************************************************************************
 -- * Function Calling and Ticker
 -- *****************************************************************************
@@ -198,6 +199,25 @@ jsFuncFromHs_ func =
 foreign import javascript "$2[$1]"
   getProperty :: JSString -> JSVal -> IO JSVal
 
+-- | Gets a property from a JavaScript object by a list of keys.
+getPropertyKey :: [JSString] -> JSVal -> IO JSVal
+getPropertyKey keys obj =
+    case keys of
+        [] -> return obj
+        (k:ks) -> do
+            tmp <- getProperty k obj
+            getPropertyKey ks tmp
+
+-- | Sets a property on a JavaScript object by a list of keys.
+setPropertyKey :: [JSString] -> JSVal -> JSVal -> IO ()
+setPropertyKey keys obj value =
+    case keys of
+        [k] -> setProperty k obj value
+        (k:ks) -> do tmp <- getProperty k obj
+                     setPropertyKey ks tmp value
+                     setProperty k obj tmp
+
+
 -- | Sets a property on a JavaScript object.
 --
 -- @param propName The name of the property to set
@@ -205,6 +225,7 @@ foreign import javascript "$2[$1]"
 -- @param value The value to set
 foreign import javascript "$2[$1] = $3"
   setProperty ::  JSString -> JSVal -> JSVal -> IO ()
+
 
 -- *****************************************************************************
 -- * Type Conversion Functions

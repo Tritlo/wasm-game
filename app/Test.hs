@@ -53,9 +53,9 @@ main = do
     addChild app fps_counter
     addEventListener "globalpointermove" sprite =<< jsFuncFromHs_
       (\event -> do
-                    mx <- fmap valAsFloat $ getProperty "screen" event  >>= getProperty "x"
-                    my <- fmap valAsFloat $ getProperty "screen" event  >>= getProperty "y"
-                    when (mx > 0.0 && mx < fromIntegral screen_width && my > 0.0 && my < fromIntegral screen_height) $ do
+                    mx <- valAsFloat <$> getPropertyKey ["screen", "x"] event
+                    my <- valAsFloat <$> getPropertyKey ["screen", "y"] event
+                    when (mx >= 0.0 && mx <= fromIntegral screen_width && my >= 0.0 && my <= fromIntegral screen_height) $ do
                         writeIORef state_ref (State { mouseX = mx, mouseY = my })
                     )
     addTicker app =<< jsFuncFromHs_ (rotateSprite sprite)
@@ -66,7 +66,7 @@ main = do
     setProperty "maxFPS" fps_ticker (intAsVal 10)
     startTicker fps_ticker
     callAddTicker fps_ticker =<< jsFuncFromHs_ (\_ -> do
-            fps <- fmap valAsFloat $ getProperty "ticker" app >>= getProperty "FPS"
+            fps <- fmap valAsFloat $ getPropertyKey ["ticker", "FPS"] app
             let fps_val = floor fps
             setProperty "text" fps_counter (stringAsVal $ toJSString $ show fps_val)
         )
