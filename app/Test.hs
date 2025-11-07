@@ -267,6 +267,8 @@ main = do
     addChild app score_text
     updateScoreDisplay initial_score score_text
 
+    game_ticker <- newTicker
     -- Update ball physics and computer paddle AI
-    addTicker app =<< jsFuncFromHs_ (fallSprite ball_state_ref score_state_ref (fromIntegral screen_width, fromIntegral screen_height) sprite bottom_paddle top_paddle score_text)
-    addTicker app =<< jsFuncFromHs_ (updateComputerPaddle ball_state_ref (fromIntegral screen_width) top_paddle)
+    callAddTicker game_ticker =<< jsFuncFromHs_ (fallSprite ball_state_ref score_state_ref (fromIntegral screen_width, fromIntegral screen_height) sprite bottom_paddle top_paddle score_text)
+    callAddTicker game_ticker =<< jsFuncFromHs_ (updateComputerPaddle ball_state_ref (fromIntegral screen_width) top_paddle)
+    startTicker game_ticker
