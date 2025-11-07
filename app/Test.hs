@@ -16,64 +16,67 @@ rotateSprite sprite time = do
     dt <- valAsFloat <$> getProperty "deltaTime" time
     incrementProperty "rotation" sprite (floatAsVal $ dt * 0.01)
 
-data State = State {
-    mouseX :: Float,
-    mouseY :: Float,
-    spriteXSpeed :: Float,
-    spriteYSpeed :: Float
+data BallState = BallState {
+    ballX :: Float,
+    ballY :: Float,
+    ballXSpeed :: Float,
+    ballYSpeed :: Float
 }
 
--- | Move sprite downward with constant speed and respawn at center if it falls out
-fallSprite :: IORef State -> Float -> Float -> JSVal -> JSVal -> JSVal -> IO ()
-fallSprite state_ref screen_width screen_height sprite paddle ticker = do
-    state <- readIORef state_ref
-    dt <- valAsFloat <$> getProperty "deltaTime" ticker
-    current_y <- valAsFloat <$> getProperty "y" sprite
-    current_x <- valAsFloat <$> getProperty "x" sprite
-    paddle_x <- valAsFloat <$> getProperty "x" paddle
-    paddle_y <- valAsFloat <$> getProperty "y" paddle
-    paddle_width <- valAsFloat <$> getProperty "width" paddle
-    let new_y = current_y + state.spriteYSpeed * dt
-    let new_x = current_x + state.spriteXSpeed * dt
+data State = State {
+    mouseX :: Float,
+    mouseY :: Float
+}
+
+type Screen = (Float, Float)
+type Paddle = (Float, Float, Float)
+
+-- | Render the ball state to the sprite
+renderBall :: BallState -> JSVal -> IO ()
+renderBall ball sprite = do
+    setProperty "x" sprite (floatAsVal $ ball.ballX)
+    setProperty "y" sprite (floatAsVal $ ball.ballY)
+
+-- | Update ball state based on physics and collisions
+updateBallState :: BallState -> Float -> Screen -> Paddle -> BallState
+updateBallState ball dt (screen_width, screen_height) (paddle_x, paddle_y, paddle_width) =
+    let new_y = ball.ballY + ball.ballYSpeed * dt
+        new_x = ball.ballX + ball.ballXSpeed * dt
         paddle_half_width = paddle_width / 2.0
         paddle_left = paddle_x - paddle_half_width
         paddle_right = paddle_x + paddle_half_width
         -- Check if sprite x is within paddle x ± half width
         x_collision = new_x >= paddle_left && new_x <= paddle_right
         -- Check if sprite is at paddle y level (with some tolerance)
-        y_collision = abs (new_y - paddle_y) < 20.0 && state.spriteYSpeed > 0.0
-
+        y_collision = abs (new_y - paddle_y) < 20.0 && ball.ballYSpeed > 0.0
+    in
     -- Check for paddle collision
     if x_collision && y_collision then
         -- Bounce off paddle: reverse y speed
-        do
-            let new_state = state { spriteYSpeed = -state.spriteYSpeed }
-            writeIORef state_ref new_state
-            setProperty "x" sprite (floatAsVal new_x)
-            setProperty "y" sprite (floatAsVal new_y)
-    else if new_y < 0.0 then do
-            let new_state = state { spriteYSpeed = abs state.spriteYSpeed }
-            writeIORef state_ref new_state
-            setProperty "x" sprite (floatAsVal new_x)
-            setProperty "y" sprite (floatAsVal 0.0)
-    else if new_y > screen_height then do
-        do let new_state = state { spriteYSpeed = abs state.spriteYSpeed }
-           writeIORef state_ref new_state
-           setProperty "x" sprite (floatAsVal $ screen_width / 2.0)
-           setProperty "y" sprite (floatAsVal $ screen_height / 2.0)
-    else if new_x < 0.0 then do
-            let new_state = state { spriteXSpeed = abs state.spriteXSpeed }
-            writeIORef state_ref new_state
-            setProperty "x" sprite (floatAsVal 0.0)
-            setProperty "y" sprite (floatAsVal new_y)
-    else if new_x > screen_width then do
-            let new_state = state { spriteXSpeed = abs state.spriteXSpeed }
-            writeIORef state_ref new_state
-            setProperty "x" sprite (floatAsVal screen_width)
-            setProperty "y" sprite (floatAsVal new_y)
-    else do
-            setProperty "x" sprite (floatAsVal new_x)
-            setProperty "y" sprite (floatAsVal new_y)
+        ball { ballX = new_x, ballY = new_y, ballYSpeed = -ball.ballYSpeed }
+    else if new_y < 0.0 then
+        ball { ballX = new_x, ballY = 0.0, ballYSpeed = abs ball.ballYSpeed }
+    else if new_y > screen_height then
+        ball { ballX = screen_width / 2.0, ballY = screen_height / 2.0, ballYSpeed = abs ball.ballYSpeed }
+    else if new_x < 0.0 then
+        ball { ballX = 0.0, ballY = new_y, ballXSpeed = abs ball.ballXSpeed }
+    else if new_x > screen_width then
+        ball { ballX = screen_width, ballY = new_y, ballXSpeed = abs ball.ballXSpeed }
+    else
+        ball { ballX = new_x, ballY = new_y }
+
+
+-- | Move sprite downward with constant speed and respawn at center if it falls out
+fallSprite :: IORef BallState -> Screen -> JSVal -> JSVal -> JSVal -> IO ()
+fallSprite ball_state_ref screen sprite paddle ticker = do
+    ball_state <- readIORef ball_state_ref
+    dt <- valAsFloat <$> getProperty "deltaTime" ticker
+    paddle_x <- valAsFloat <$> getProperty "x" paddle
+    paddle_y <- valAsFloat <$> getProperty "y" paddle
+    paddle_width <- valAsFloat <$> getProperty "width" paddle
+    let updated_ball = updateBallState ball_state dt screen (paddle_x,paddle_y, paddle_width)
+    writeIORef ball_state_ref updated_ball
+    renderBall updated_ball sprite
 
 
 
@@ -89,13 +92,15 @@ main = do
     sprite <- loadAsset "https://pixijs.com/assets/bunny.png" >>= newSprite
     setProperty "eventMode" sprite (stringAsVal "static")
     setAnchor sprite 0.5
-    let initial_state = State { mouseX = fromIntegral screen_width / 2.0,
-                               mouseY = fromIntegral screen_height / 2.0,
-                               spriteXSpeed = 0.0,
-                               spriteYSpeed = 5.0 }
+    let initial_ball = BallState { ballX = fromIntegral screen_width / 2.0,
+                                   ballY = fromIntegral screen_height / 2.0,
+                                   ballXSpeed = 0.0,
+                                   ballYSpeed = 5.0 }
+        initial_state = State { mouseX = fromIntegral screen_width / 2.0,
+                               mouseY = fromIntegral screen_height / 2.0 }
+    ball_state_ref <- newIORef initial_ball
     state_ref <- newIORef initial_state
-    setProperty "x" sprite (floatAsVal $ initial_state.mouseX)
-    setProperty "y" sprite (floatAsVal $ initial_state.mouseY)
+    renderBall initial_ball sprite
     addChild app sprite
     fps_counter <- newText "0" "white"
     setProperty "x" fps_counter (floatAsVal 10.0)
@@ -130,4 +135,4 @@ main = do
                     )
 
     -- Update fallSprite call to include paddle
-    addTicker app =<< jsFuncFromHs_ (fallSprite state_ref (fromIntegral screen_width) (fromIntegral screen_height) sprite paddle)
+    addTicker app =<< jsFuncFromHs_ (fallSprite ball_state_ref (fromIntegral screen_width, fromIntegral screen_height) sprite paddle)
