@@ -27,6 +27,22 @@ moveSprite sprite state_ref _ = do
     setProperty "x" sprite (floatAsVal $ state.mouseX)
     setProperty "y" sprite (floatAsVal $ state.mouseY)
 
+-- | Move sprite downward with constant speed and respawn at center if it falls out
+fallSprite :: Float -> Float -> JSVal -> JSVal -> IO ()
+fallSprite screen_width screen_height sprite ticker = do
+    dt <- valAsFloat <$> getProperty "deltaTime" ticker
+    current_y <- valAsFloat <$> getProperty "y" sprite
+    let fall_speed = 5.0  -- pixels per second
+        new_y = current_y + fall_speed * dt
+
+    if new_y > screen_height then
+        -- Respawn at center
+        do
+            setProperty "x" sprite (floatAsVal $ screen_width / 2.0)
+            setProperty "y" sprite (floatAsVal $ screen_height / 2.0)
+    else
+        setProperty "y" sprite (floatAsVal new_y)
+
 
 
 main :: IO ()
@@ -52,7 +68,7 @@ main = do
     setProperty "y" fps_counter (floatAsVal 10.0)
     addChild app fps_counter
     addTicker app =<< jsFuncFromHs_ (rotateSprite sprite)
-    addTicker app =<< jsFuncFromHs_ (moveSprite sprite state_ref)
+    addTicker app =<< jsFuncFromHs_ (fallSprite (fromIntegral screen_width) (fromIntegral screen_height) sprite)
 
     -- FPS counter
     fps_ticker <- newTicker
