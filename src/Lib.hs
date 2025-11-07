@@ -46,6 +46,15 @@ foreign import javascript safe
  initApp :: JSVal -> JSString -> IO JSVal
 
 
+
+foreign import javascript safe
+ """
+  const r = await $1.init({background: $2, resizeTo: document.querySelector($3)});
+  return $1
+  """
+    initAppInTarget :: JSVal -> JSString -> JSString -> IO JSVal
+
+
 -- | Appends the application's canvas to the document body.
 -- This makes the PIXI.js canvas visible in the browser.
 --
@@ -53,6 +62,13 @@ foreign import javascript safe
 foreign import javascript unsafe "document.body.appendChild($1.canvas)"
     appendCanvas :: JSVal -> IO ()
 
+
+-- | Appends the application's canvas to the document body.
+-- This makes the PIXI.js canvas visible in the target element.
+--
+-- @param app The PIXI Application object whose canvas should be appended
+foreign import javascript unsafe "document.querySelector($1).appendChild($2.canvas)"
+    appendToTarget :: JSString -> JSVal -> IO ()
 -- *****************************************************************************
 -- * Console Logging
 -- *****************************************************************************

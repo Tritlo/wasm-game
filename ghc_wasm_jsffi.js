@@ -110,10 +110,10 @@ ZC15ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.stage.addChild($2)),
 ZC16ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.anchor.set($2)),
 ZC17ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => (new Sprite($1)),
 ZC18ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => {const texture = await Assets.load($1); return texture},
-ZC20ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => (document.body.appendChild($1.canvas)),
-ZC21ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2) => {const r = await $1.init({background: $2, resizeTo: window});
+ZC20ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => (document.querySelector($1).appendChild($2.canvas)),
+ZC22ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2,$3) => {const r = await $1.init({background: $2, resizeTo: document.querySelector($3)});
 return $1},
-ZC22ZCtestzm0zi3zi0zi0zminplaceZCLibZC: () => (new Application()),
+ZC24ZCtestzm0zi3zi0zi0zminplaceZCLibZC: () => (new Application()),
 ZC0ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1,$2) => ($1.reject(new WebAssembly.RuntimeError($2))),
 ZC18ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1,$2) => ($1.resolve($2)),
 ZC19ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1) => ($1.resolve()),

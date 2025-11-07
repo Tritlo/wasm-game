@@ -17,8 +17,8 @@ rotateSprite sprite time = do
 main :: IO ()
 main = do
     app <- newApp
-    app <- initApp app $ toJSString "black"
-    appendCanvas app
+    app <- initAppInTarget app "black" "#canvas-container"
+    appendToTarget "#canvas-container" app
     screen <- getProperty "screen" app
     screen_width <- valAsInt <$> getProperty "width" screen
     screen_height <- valAsInt <$> getProperty "height" screen
