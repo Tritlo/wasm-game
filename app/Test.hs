@@ -37,6 +37,18 @@ renderBall ball sprite = do
     setProperty "x" sprite (floatAsVal $ ball.ballX)
     setProperty "y" sprite (floatAsVal $ ball.ballY)
 
+-- | Reflect velocity based on surface normal
+-- For horizontal surfaces (top/bottom), reflect Y component
+-- For vertical surfaces (left/right), reflect X component
+reflectVelocity :: Float -> Float -> Bool -> (Float, Float)
+reflectVelocity x_speed y_speed is_horizontal =
+    if is_horizontal then
+        -- Reflect across horizontal axis: reverse Y, keep X
+        (x_speed, -y_speed)
+    else
+        -- Reflect across vertical axis: reverse X, keep Y
+        (-x_speed, y_speed)
+
 -- | Update ball state based on physics and collisions
 updateBallState :: BallState -> Float -> Screen -> Paddle -> BallState
 updateBallState ball dt (screen_width, screen_height) (paddle_x, paddle_y, paddle_width) =
@@ -55,13 +67,20 @@ updateBallState ball dt (screen_width, screen_height) (paddle_x, paddle_y, paddl
         -- Bounce off paddle: reverse y speed
         ball { ballX = new_x, ballY = new_y, ballYSpeed = -ball.ballYSpeed }
     else if new_y < 0.0 then
-        ball { ballX = new_x, ballY = 0.0, ballYSpeed = abs ball.ballYSpeed }
+        -- Top edge: bounce based on angle (reflect Y component, preserve X)
+        let (new_x_speed, new_y_speed) = reflectVelocity ball.ballXSpeed ball.ballYSpeed True
+        in ball { ballX = new_x, ballY = 0.0, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
     else if new_y > screen_height then
-        ball { ballX = screen_width / 2.0, ballY = screen_height / 2.0, ballYSpeed = abs ball.ballYSpeed }
+        -- Bottom edge: reset ball to center
+        ball { ballX = screen_width / 2.0, ballY = screen_height / 2.0, ballXSpeed = 2.0, ballYSpeed = 5.0 }
     else if new_x < 0.0 then
-        ball { ballX = 0.0, ballY = new_y, ballXSpeed = abs ball.ballXSpeed }
+        -- Left edge: bounce based on angle (reflect X component, preserve Y)
+        let (new_x_speed, new_y_speed) = reflectVelocity ball.ballXSpeed ball.ballYSpeed False
+        in ball { ballX = 0.0, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
     else if new_x > screen_width then
-        ball { ballX = screen_width, ballY = new_y, ballXSpeed = abs ball.ballXSpeed }
+        -- Right edge: bounce based on angle (reflect X component, preserve Y)
+        let (new_x_speed, new_y_speed) = reflectVelocity ball.ballXSpeed ball.ballYSpeed False
+        in ball { ballX = screen_width, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
     else
         ball { ballX = new_x, ballY = new_y }
 
@@ -94,7 +113,7 @@ main = do
     setAnchor sprite 0.5
     let initial_ball = BallState { ballX = fromIntegral screen_width / 2.0,
                                    ballY = fromIntegral screen_height / 2.0,
-                                   ballXSpeed = 0.0,
+                                   ballXSpeed = 2.0,
                                    ballYSpeed = 5.0 }
         initial_state = State { mouseX = fromIntegral screen_width / 2.0,
                                mouseY = fromIntegral screen_height / 2.0 }
