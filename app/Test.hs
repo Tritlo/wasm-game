@@ -4,14 +4,14 @@ import Lib
 import GHC.Wasm.Prim
 import Data.String (IsString(..))
 
--- -- Export the actual initialization function
+-- Export the actual initialization function
 foreign export javascript "main" main :: IO ()
 
-
+-- | Rotate the sprite by the delta time.
 rotateSprite :: JSVal -> JSVal -> IO JSVal
 rotateSprite sprite time = do
     dt <- valAsFloat <$> getProperty "deltaTime" time
-    incrementProperty "rotation" sprite (floatAsVal 0.01)
+    incrementProperty "rotation" sprite (floatAsVal $ dt * 0.01)
     return sprite
 
 main :: IO ()
