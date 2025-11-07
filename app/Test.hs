@@ -37,6 +37,23 @@ renderBall ball sprite = do
     setProperty "x" sprite (floatAsVal $ ball.ballX)
     setProperty "y" sprite (floatAsVal $ ball.ballY)
 
+-- | Calculate bounce velocity based on paddle hit position
+-- hit_position: normalized position on paddle (-1.0 = left edge, 0.0 = center, 1.0 = right edge)
+-- base_speed: base speed magnitude to maintain
+-- is_top_paddle: True if bouncing off top paddle (ball should go down), False for bottom paddle (ball should go up)
+-- Returns: (new_x_speed, new_y_speed)
+calculatePaddleBounce :: Float -> Float -> Bool -> (Float, Float)
+calculatePaddleBounce hit_position base_speed is_top_paddle =
+    -- Maximum angle deviation (in radians) - adjust this to control how much angle changes
+    let max_angle = 1.0  -- ~57 degrees
+        angle = hit_position * max_angle
+        -- Calculate new velocities based on angle
+        -- Y speed direction depends on which paddle: top paddle -> positive (down), bottom paddle -> negative (up)
+        y_direction = if is_top_paddle then 1.0 else -1.0
+        new_y_speed = y_direction * abs base_speed * cos angle
+        new_x_speed = abs base_speed * sin angle
+    in (new_x_speed, new_y_speed)
+
 -- | Reflect velocity based on surface normal
 -- For horizontal surfaces (top/bottom), reflect Y component
 -- For vertical surfaces (left/right), reflect X component
@@ -49,23 +66,48 @@ reflectVelocity x_speed y_speed is_horizontal =
         -- Reflect across vertical axis: reverse X, keep Y
         (-x_speed, y_speed)
 
--- | Update ball state based on physics and collisions
-updateBallState :: BallState -> Float -> Screen -> Paddle -> BallState
-updateBallState ball dt (screen_width, screen_height) (paddle_x, paddle_y, paddle_width) =
-    let new_y = ball.ballY + ball.ballYSpeed * dt
-        new_x = ball.ballX + ball.ballXSpeed * dt
-        paddle_half_width = paddle_width / 2.0
+-- | Check collision with a paddle and return hit position
+-- Returns: (collision_detected, hit_position)
+-- hit_position: normalized position on paddle (-1.0 = left edge, 0.0 = center, 1.0 = right edge)
+checkPaddleCollision :: Float -> Float -> Paddle -> Bool -> Bool -> (Bool, Float)
+checkPaddleCollision ball_x ball_y (paddle_x, paddle_y, paddle_width) ball_moving_down paddle_is_bottom =
+    let paddle_half_width = paddle_width / 2.0
         paddle_left = paddle_x - paddle_half_width
         paddle_right = paddle_x + paddle_half_width
-        -- Check if sprite x is within paddle x ± half width
-        x_collision = new_x >= paddle_left && new_x <= paddle_right
-        -- Check if sprite is at paddle y level (with some tolerance)
-        y_collision = abs (new_y - paddle_y) < 20.0 && ball.ballYSpeed > 0.0
+        x_collision = ball_x >= paddle_left && ball_x <= paddle_right
+        y_collision = abs (ball_y - paddle_y) < 20.0
+        -- Bottom paddle: ball must be moving down
+        -- Top paddle: ball must be moving up
+        correct_direction = if paddle_is_bottom then ball_moving_down else not ball_moving_down
+        collision = x_collision && y_collision && correct_direction
+        -- Calculate normalized hit position (-1.0 to 1.0)
+        hit_position = if collision then
+            -- Distance from center of paddle, normalized to [-1, 1], clamped
+            max (-1.0) $ min 1.0 $ (ball_x - paddle_x) / paddle_half_width
+        else
+            0.0
+    in (collision, hit_position)
+
+-- | Update ball state based on physics and collisions
+updateBallState :: BallState -> Float -> Screen -> Paddle -> Paddle -> BallState
+updateBallState ball dt (screen_width, screen_height) bottom_paddle top_paddle =
+    let new_y = ball.ballY + ball.ballYSpeed * dt
+        new_x = ball.ballX + ball.ballXSpeed * dt
+        ball_moving_down = ball.ballYSpeed > 0.0
+        (bottom_collision, bottom_hit_pos) = checkPaddleCollision new_x new_y bottom_paddle ball_moving_down True
+        (top_collision, top_hit_pos) = checkPaddleCollision new_x new_y top_paddle ball_moving_down False
+        -- Calculate base speed magnitude
+        base_speed = sqrt (ball.ballXSpeed * ball.ballXSpeed + ball.ballYSpeed * ball.ballYSpeed)
     in
-    -- Check for paddle collision
-    if x_collision && y_collision then
-        -- Bounce off paddle: reverse y speed
-        ball { ballX = new_x, ballY = new_y, ballYSpeed = -ball.ballYSpeed }
+    -- Check for paddle collisions
+    if bottom_collision then
+        -- Bounce off bottom paddle with angle based on hit position (ball goes up)
+        let (new_x_speed, new_y_speed) = calculatePaddleBounce bottom_hit_pos base_speed False
+        in ball { ballX = new_x, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
+    else if top_collision then
+        -- Bounce off top paddle with angle based on hit position (ball goes down)
+        let (new_x_speed, new_y_speed) = calculatePaddleBounce top_hit_pos base_speed True
+        in ball { ballX = new_x, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
     else if new_y < 0.0 then
         -- Top edge: bounce based on angle (reflect Y component, preserve X)
         let (new_x_speed, new_y_speed) = reflectVelocity ball.ballXSpeed ball.ballYSpeed True
@@ -85,15 +127,34 @@ updateBallState ball dt (screen_width, screen_height) (paddle_x, paddle_y, paddl
         ball { ballX = new_x, ballY = new_y }
 
 
--- | Move sprite downward with constant speed and respawn at center if it falls out
-fallSprite :: IORef BallState -> Screen -> JSVal -> JSVal -> JSVal -> IO ()
-fallSprite ball_state_ref screen sprite paddle ticker = do
+-- | AI function to move computer paddle towards ball
+updateComputerPaddle :: IORef BallState -> Float -> JSVal -> JSVal -> IO ()
+updateComputerPaddle ball_state_ref screen_width computer_paddle ticker = do
     ball_state <- readIORef ball_state_ref
     dt <- valAsFloat <$> getProperty "deltaTime" ticker
-    paddle_x <- valAsFloat <$> getProperty "x" paddle
-    paddle_y <- valAsFloat <$> getProperty "y" paddle
-    paddle_width <- valAsFloat <$> getProperty "width" paddle
-    let updated_ball = updateBallState ball_state dt screen (paddle_x,paddle_y, paddle_width)
+    current_paddle_x <- valAsFloat <$> getProperty "x" computer_paddle
+    let target_x = ball_state.ballX
+        speed = 300.0 -- pixels per second
+        distance = target_x - current_paddle_x
+        max_move = speed * dt
+        move = if abs distance < max_move then distance else if distance > 0 then max_move else -max_move
+        new_x = max 0.0 $ min (screen_width) (current_paddle_x + move)
+    setProperty "x" computer_paddle (floatAsVal new_x)
+
+-- | Move sprite downward with constant speed and respawn at center if it falls out
+fallSprite :: IORef BallState -> Screen -> JSVal -> JSVal -> JSVal -> JSVal -> IO ()
+fallSprite ball_state_ref screen sprite bottom_paddle top_paddle ticker = do
+    ball_state <- readIORef ball_state_ref
+    dt <- valAsFloat <$> getProperty "deltaTime" ticker
+    bottom_paddle_x <- valAsFloat <$> getProperty "x" bottom_paddle
+    bottom_paddle_y <- valAsFloat <$> getProperty "y" bottom_paddle
+    bottom_paddle_width <- valAsFloat <$> getProperty "width" bottom_paddle
+    top_paddle_x <- valAsFloat <$> getProperty "x" top_paddle
+    top_paddle_y <- valAsFloat <$> getProperty "y" top_paddle
+    top_paddle_width <- valAsFloat <$> getProperty "width" top_paddle
+    let updated_ball = updateBallState ball_state dt screen
+                                      (bottom_paddle_x, bottom_paddle_y, bottom_paddle_width)
+                                      (top_paddle_x, top_paddle_y, top_paddle_width)
     writeIORef ball_state_ref updated_ball
     renderBall updated_ball sprite
 
@@ -137,21 +198,33 @@ main = do
             setProperty "text" fps_counter (stringAsVal $ toJSString $ show fps_val)
         )
 
-    paddle <- baseTexture "WHITE" >>= newSprite
-    setProperty "eventMode" paddle (stringAsVal "static")
-    setProperty "width" paddle (floatAsVal 50.0)
-    setProperty "height" paddle (floatAsVal 10.0)
-    setAnchor paddle 0.5
-    setProperty "x" paddle (floatAsVal $ (fromIntegral  screen_width) / 2.0)
-    setProperty "y" paddle (floatAsVal $ (fromIntegral  screen_height) - 100.0)
-    addChild app paddle
+    -- Bottom paddle (player controlled)
+    bottom_paddle <- baseTexture "WHITE" >>= newSprite
+    setProperty "eventMode" bottom_paddle (stringAsVal "static")
+    setProperty "width" bottom_paddle (floatAsVal 50.0)
+    setProperty "height" bottom_paddle (floatAsVal 10.0)
+    setAnchor bottom_paddle 0.5
+    setProperty "x" bottom_paddle (floatAsVal $ (fromIntegral  screen_width) / 2.0)
+    setProperty "y" bottom_paddle (floatAsVal $ (fromIntegral  screen_height) - 100.0)
+    addChild app bottom_paddle
 
-    addEventListener "globalpointermove" paddle =<< jsFuncFromHs_
+    addEventListener "globalpointermove" bottom_paddle =<< jsFuncFromHs_
       (\event -> do
                     mx <- valAsFloat <$> getPropertyKey ["screen", "x"] event
                     when (mx >= 0.0 && mx <= fromIntegral screen_width) $ do
-                        setProperty "x" paddle (floatAsVal mx)
+                        setProperty "x" bottom_paddle (floatAsVal mx)
                     )
 
-    -- Update fallSprite call to include paddle
-    addTicker app =<< jsFuncFromHs_ (fallSprite ball_state_ref (fromIntegral screen_width, fromIntegral screen_height) sprite paddle)
+    -- Top paddle (computer controlled)
+    top_paddle <- baseTexture "WHITE" >>= newSprite
+    setProperty "eventMode" top_paddle (stringAsVal "static")
+    setProperty "width" top_paddle (floatAsVal 50.0)
+    setProperty "height" top_paddle (floatAsVal 10.0)
+    setAnchor top_paddle 0.5
+    setProperty "x" top_paddle (floatAsVal $ (fromIntegral  screen_width) / 2.0)
+    setProperty "y" top_paddle (floatAsVal 100.0)
+    addChild app top_paddle
+
+    -- Update ball physics and computer paddle AI
+    addTicker app =<< jsFuncFromHs_ (fallSprite ball_state_ref (fromIntegral screen_width, fromIntegral screen_height) sprite bottom_paddle top_paddle)
+    addTicker app =<< jsFuncFromHs_ (updateComputerPaddle ball_state_ref (fromIntegral screen_width) top_paddle)
