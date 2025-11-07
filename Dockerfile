@@ -88,8 +88,8 @@ RUN echo "packages: *.cabal" > /app/cabal.project.local &&\
           build --only-dependencies --project-file=cabal.project --project-dir=/app
 
 # Copy the rest of the source code (including dpella-ffi)
-COPY --link --parents --chown=${UID}:${GID}  src/ /app/
-COPY --link --parents --chown=${UID}:${GID}  app/ /app/
+COPY --parents --chown=${UID}:${GID}  src/ /app/
+COPY --parents --chown=${UID}:${GID}  app/ /app/
 
 WORKDIR /app
 

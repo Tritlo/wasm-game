@@ -26,8 +26,11 @@ type JSFunction = JSVal
 -- | Creates a new PIXI.js Application instance.
 -- This creates a new PIXI Application object without initializing it.
 -- Use 'initApp' to initialize the application with configuration options.
-foreign import javascript unsafe "new Application()"
+foreign import javascript unsafe "new PIXI.Application()"
    newApp :: IO JSVal
+
+foreign import javascript unsafe "new PIXI.Text({text: $1, style: {fill: $2 }})"
+   newText :: JSString -> JSString -> IO JSVal
 
 -- | Initializes a PIXI.js Application with the given background color.
 --
@@ -116,7 +119,7 @@ foreign import javascript safe "const texture = await Assets.load($1); return te
 --
 -- @param texture The texture to use for the sprite
 -- @return A new Sprite object
-foreign import javascript unsafe "new Sprite($1)"
+foreign import javascript unsafe "new PIXI.Sprite($1)"
     newSprite :: JSVal -> IO JSVal
 
 -- | Sets the anchor point of a sprite.
@@ -157,6 +160,15 @@ foreign import javascript unsafe "$1($2)"
 foreign import javascript unsafe "$1.ticker.add($2)"
     addTicker :: JSVal -> JSFunction -> IO ()
 
+foreign import javascript unsafe "new PIXI.Ticker()"
+    newTicker :: IO JSVal
+
+foreign import javascript unsafe "$1.add($2)"
+    callAddTicker :: JSVal -> JSFunction -> IO ()
+
+foreign import javascript unsafe "$1.start()"
+    startTicker :: JSVal -> IO ()
+
 -- *****************************************************************************
 -- * JavaScript Interop Utilities
 -- *****************************************************************************
@@ -169,6 +181,14 @@ foreign import javascript unsafe "$1.ticker.add($2)"
 -- @return A JavaScript function that can be passed to JavaScript code
 foreign import javascript "wrapper"
   jsFuncFromHs :: (JSVal -> IO JSVal) -> IO JSVal
+
+-- | Converts a Haskell function to a JavaScript function that does not return a value.
+jsFuncFromHs_ :: (JSVal -> IO ()) -> IO JSVal
+jsFuncFromHs_ func =
+    jsFuncFromHs (\val -> do
+        func val
+        return val
+    )
 
 -- | Gets a property from a JavaScript object.
 --
@@ -240,3 +260,12 @@ foreign import javascript "$2[$1] += $3"
 -- @\"hello\" :: JSString@.
 instance IsString JSString where
     fromString = toJSString
+
+
+-- | Adds an event listener to a JavaScript object.
+--
+-- @param event The event to listen for (e.g., "click")
+-- @param listener The function to call when the event occurs
+-- @param obj The JavaScript object to add the event listener to
+foreign import javascript unsafe "$2.on($1, $3)"
+  addEventListener :: JSString -> JSVal -> JSFunction -> IO ()
