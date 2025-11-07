@@ -29,6 +29,11 @@ type JSFunction = JSVal
 foreign import javascript unsafe "new PIXI.Application()"
    newApp :: IO JSVal
 
+-- | Creates a new PIXI.js Text object with the specified text and fill color.
+--
+-- @param text The text content to display
+-- @param fillColor The fill color as a JavaScript string (e.g., "white", "#FF0000")
+-- @return A new Text object
 foreign import javascript unsafe "new PIXI.Text({text: $1, style: {fill: $2 }})"
    newText :: JSString -> JSString -> IO JSVal
 
@@ -122,15 +127,34 @@ foreign import javascript safe "const texture = await Assets.load($1); return te
 foreign import javascript unsafe "new PIXI.Sprite($1)"
     newSprite :: JSVal -> IO JSVal
 
+-- | Gets a base texture from PIXI's built-in texture cache.
+--
+-- Common texture names include "WHITE" for a white rectangle texture.
+--
+-- @param textureName The name of the texture (e.g., "WHITE")
+-- @return The texture object
 foreign import javascript unsafe "PIXI.Texture[$1]"
    baseTexture :: JSString -> IO JSVal
 
+-- | Plays a default blip sound effect.
+--
+-- Uses the default frequency, duration, and volume settings.
 foreign import javascript unsafe "blip()"
     blip :: IO ()
 
+-- | Plays a blip sound effect with custom parameters.
+--
+-- @param frequency Frequency in Hz
+-- @param duration Duration in milliseconds
+-- @param volume Volume level (0.0 to 1.0)
 foreign import javascript unsafe "blip($1, $2, $3)"
     blipWithArgs :: Float -> Float -> Float -> IO ()
 
+-- | Plays a blip sound effect with a custom frequency.
+--
+-- Uses default duration and volume settings.
+--
+-- @param frequency Frequency in Hz
 foreign import javascript unsafe "blip($1)"
     blipWithFreq :: Float -> IO ()
 
@@ -174,12 +198,27 @@ foreign import javascript unsafe "$1($2)"
 foreign import javascript unsafe "$1.ticker.add($2)"
     addTicker :: JSVal -> JSFunction -> IO ()
 
+-- | Creates a new PIXI.js Ticker instance.
+--
+-- A ticker is used to call functions repeatedly at a specified rate.
+-- Use 'startTicker' to begin ticking, and 'callAddTicker' to add callbacks.
+--
+-- @return A new Ticker object
 foreign import javascript unsafe "new PIXI.Ticker()"
     newTicker :: IO JSVal
 
+-- | Adds a callback function to a ticker.
+--
+-- The callback will be called on each tick with the ticker object as an argument.
+--
+-- @param ticker The ticker to add the callback to
+-- @param func The function to call on each tick
 foreign import javascript unsafe "$1.add($2)"
     callAddTicker :: JSVal -> JSFunction -> IO ()
 
+-- | Starts a ticker, causing it to begin calling its callbacks.
+--
+-- @param ticker The ticker to start
 foreign import javascript unsafe "$1.start()"
     startTicker :: JSVal -> IO ()
 
