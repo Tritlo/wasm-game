@@ -24,18 +24,43 @@ data State = State {
 }
 
 -- | Move sprite downward with constant speed and respawn at center if it falls out
-fallSprite :: IORef State -> Float -> Float -> JSVal -> JSVal -> IO ()
-fallSprite state_ref screen_width screen_height sprite ticker = do
+fallSprite :: IORef State -> Float -> Float -> JSVal -> JSVal -> JSVal -> IO ()
+fallSprite state_ref screen_width screen_height sprite paddle ticker = do
     state <- readIORef state_ref
     dt <- valAsFloat <$> getProperty "deltaTime" ticker
     current_y <- valAsFloat <$> getProperty "y" sprite
     current_x <- valAsFloat <$> getProperty "x" sprite
+    paddle_x <- valAsFloat <$> getProperty "x" paddle
+    paddle_y <- valAsFloat <$> getProperty "y" paddle
+    paddle_width <- valAsFloat <$> getProperty "width" paddle
     let new_y = current_y + state.spriteYSpeed * dt
     let new_x = current_x + state.spriteXSpeed * dt
+        paddle_half_width = paddle_width / 2.0
+        paddle_left = paddle_x - paddle_half_width
+        paddle_right = paddle_x + paddle_half_width
+        -- Check if sprite x is within paddle x ± half width
+        x_collision = new_x >= paddle_left && new_x <= paddle_right
+        -- Check if sprite is at paddle y level (with some tolerance)
+        y_collision = abs (new_y - paddle_y) < 20.0 && state.spriteYSpeed > 0.0
 
-    if new_y > screen_height then
+    -- Check for paddle collision
+    if x_collision && y_collision then
+        -- Bounce off paddle: reverse y speed
+        do
+            let new_state = state { spriteYSpeed = -state.spriteYSpeed }
+            writeIORef state_ref new_state
+            setProperty "x" sprite (floatAsVal new_x)
+            setProperty "y" sprite (floatAsVal new_y)
+    else if new_y < 0.0 then do
+            let new_state = state { spriteYSpeed = abs state.spriteYSpeed }
+            writeIORef state_ref new_state
+            setProperty "x" sprite (floatAsVal new_x)
+            setProperty "y" sprite (floatAsVal 0.0)
+    else if new_y > screen_height || new_x > screen_width || new_x < 0.0 || new_y < 0.0 then
         -- Respawn at center
         do
+            let new_state = state { spriteYSpeed = abs state.spriteYSpeed }
+            writeIORef state_ref new_state
             setProperty "x" sprite (floatAsVal $ screen_width / 2.0)
             setProperty "y" sprite (floatAsVal $ screen_height / 2.0)
     else
@@ -69,7 +94,6 @@ main = do
     setProperty "y" fps_counter (floatAsVal 10.0)
     addChild app fps_counter
     addTicker app =<< jsFuncFromHs_ (rotateSprite sprite)
-    addTicker app =<< jsFuncFromHs_ (fallSprite state_ref (fromIntegral screen_width) (fromIntegral screen_height) sprite)
 
     -- FPS counter
     fps_ticker <- newTicker
@@ -96,3 +120,6 @@ main = do
                     when (mx >= 0.0 && mx <= fromIntegral screen_width) $ do
                         setProperty "x" paddle (floatAsVal mx)
                     )
+
+    -- Update fallSprite call to include paddle
+    addTicker app =<< jsFuncFromHs_ (fallSprite state_ref (fromIntegral screen_width) (fromIntegral screen_height) sprite paddle)
