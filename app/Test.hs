@@ -56,16 +56,24 @@ fallSprite state_ref screen_width screen_height sprite paddle ticker = do
             writeIORef state_ref new_state
             setProperty "x" sprite (floatAsVal new_x)
             setProperty "y" sprite (floatAsVal 0.0)
-    else if new_y > screen_height || new_x > screen_width || new_x < 0.0 || new_y < 0.0 then
-        -- Respawn at center
-        do
-            let new_state = state { spriteYSpeed = abs state.spriteYSpeed }
+    else if new_y > screen_height then do
+        do let new_state = state { spriteYSpeed = abs state.spriteYSpeed }
+           writeIORef state_ref new_state
+           setProperty "x" sprite (floatAsVal $ screen_width / 2.0)
+           setProperty "y" sprite (floatAsVal $ screen_height / 2.0)
+    else if new_x < 0.0 then do
+            let new_state = state { spriteXSpeed = abs state.spriteXSpeed }
             writeIORef state_ref new_state
-            setProperty "x" sprite (floatAsVal $ screen_width / 2.0)
-            setProperty "y" sprite (floatAsVal $ screen_height / 2.0)
-    else
-        do setProperty "x" sprite (floatAsVal new_x)
-           setProperty "y" sprite (floatAsVal new_y)
+            setProperty "x" sprite (floatAsVal 0.0)
+            setProperty "y" sprite (floatAsVal new_y)
+    else if new_x > screen_width then do
+            let new_state = state { spriteXSpeed = abs state.spriteXSpeed }
+            writeIORef state_ref new_state
+            setProperty "x" sprite (floatAsVal screen_width)
+            setProperty "y" sprite (floatAsVal new_y)
+    else do
+            setProperty "x" sprite (floatAsVal new_x)
+            setProperty "y" sprite (floatAsVal new_y)
 
 
 
