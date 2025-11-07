@@ -51,13 +51,6 @@ main = do
     setProperty "x" fps_counter (floatAsVal 10.0)
     setProperty "y" fps_counter (floatAsVal 10.0)
     addChild app fps_counter
-    addEventListener "globalpointermove" sprite =<< jsFuncFromHs_
-      (\event -> do
-                    mx <- valAsFloat <$> getPropertyKey ["screen", "x"] event
-                    my <- valAsFloat <$> getPropertyKey ["screen", "y"] event
-                    when (mx >= 0.0 && mx <= fromIntegral screen_width && my >= 0.0 && my <= fromIntegral screen_height) $ do
-                        writeIORef state_ref (State { mouseX = mx, mouseY = my })
-                    )
     addTicker app =<< jsFuncFromHs_ (rotateSprite sprite)
     addTicker app =<< jsFuncFromHs_ (moveSprite sprite state_ref)
 
@@ -70,3 +63,19 @@ main = do
             let fps_val = floor fps
             setProperty "text" fps_counter (stringAsVal $ toJSString $ show fps_val)
         )
+
+    paddle <- baseTexture "WHITE" >>= newSprite
+    setProperty "eventMode" paddle (stringAsVal "static")
+    setProperty "width" paddle (floatAsVal 50.0)
+    setProperty "height" paddle (floatAsVal 10.0)
+    setAnchor paddle 0.5
+    setProperty "x" paddle (floatAsVal $ (fromIntegral  screen_width) / 2.0)
+    setProperty "y" paddle (floatAsVal $ (fromIntegral  screen_height) - 100.0)
+    addChild app paddle
+
+    addEventListener "globalpointermove" paddle =<< jsFuncFromHs_
+      (\event -> do
+                    mx <- valAsFloat <$> getPropertyKey ["screen", "x"] event
+                    when (mx >= 0.0 && mx <= fromIntegral screen_width) $ do
+                        setProperty "x" paddle (floatAsVal mx)
+                    )

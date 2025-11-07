@@ -122,6 +122,9 @@ foreign import javascript safe "const texture = await Assets.load($1); return te
 foreign import javascript unsafe "new PIXI.Sprite($1)"
     newSprite :: JSVal -> IO JSVal
 
+foreign import javascript unsafe "PIXI.Texture[$1]"
+   baseTexture :: JSString -> IO JSVal
+
 -- | Sets the anchor point of a sprite.
 -- The anchor point determines the point around which transformations are applied.
 -- A value of 0.5 means the anchor is at the center of the sprite.
