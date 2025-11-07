@@ -52,11 +52,14 @@ calculatePaddleBounce hit_position base_speed is_top_paddle =
     -- Maximum angle deviation (in radians) - adjust this to control how much angle changes
     let max_angle = 1.0  -- ~57 degrees
         angle = hit_position * max_angle
+        -- Increase speed slightly on each bounce (5% increase)
+        speed_multiplier = 1.05
+        increased_speed = base_speed * speed_multiplier
         -- Calculate new velocities based on angle
         -- Y speed direction depends on which paddle: top paddle -> positive (down), bottom paddle -> negative (up)
         y_direction = if is_top_paddle then 1.0 else -1.0
-        new_y_speed = y_direction * abs base_speed * cos angle
-        new_x_speed = abs base_speed * sin angle
+        new_y_speed = y_direction * abs increased_speed * cos angle
+        new_x_speed = abs increased_speed * sin angle
     in (new_x_speed, new_y_speed)
 
 -- | Reflect velocity based on surface normal
@@ -140,9 +143,9 @@ updateComputerPaddle ball_state_ref screen_width computer_paddle ticker = do
     dt <- valAsFloat <$> getProperty "deltaTime" ticker
     current_paddle_x <- valAsFloat <$> getProperty "x" computer_paddle
     let target_x = ball_state.ballX
-        speed = 300.0 -- pixels per second
+        max_speed = 2.0 -- pixels per second (reduced to make it beatable)
         distance = target_x - current_paddle_x
-        max_move = speed * dt
+        max_move = max_speed * dt
         move = if abs distance < max_move then distance else if distance > 0 then max_move else -max_move
         new_x = max 0.0 $ min (screen_width) (current_paddle_x + move)
     setProperty "x" computer_paddle (floatAsVal new_x)
@@ -199,7 +202,7 @@ main = do
     setAnchor sprite 0.5
     let initial_ball = BallState { ballX = fromIntegral screen_width / 2.0,
                                    ballY = fromIntegral screen_height / 2.0,
-                                   ballXSpeed = 2.0,
+                                   ballXSpeed = 0.0,
                                    ballYSpeed = 5.0 }
         initial_state = State { mouseX = fromIntegral screen_width / 2.0,
                                mouseY = fromIntegral screen_height / 2.0 }

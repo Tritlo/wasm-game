@@ -125,6 +125,12 @@ foreign import javascript unsafe "new PIXI.Sprite($1)"
 foreign import javascript unsafe "PIXI.Texture[$1]"
    baseTexture :: JSString -> IO JSVal
 
+foreign import javascript unsafe "blip()"
+    blip :: IO ()
+
+foreign import javascript unsafe "blip($1, $2, $3)"
+    blipWithArgs :: Float -> Float -> Float -> IO ()
+
 -- | Sets the anchor point of a sprite.
 -- The anchor point determines the point around which transformations are applied.
 -- A value of 0.5 means the anchor is at the center of the sprite.
