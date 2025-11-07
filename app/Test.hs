@@ -202,7 +202,8 @@ main = do
     screen_width <- valAsInt <$> getProperty "width" screen
     screen_height <- valAsInt <$> getProperty "height" screen
     -- Sprite
-    sprite <- loadAsset "https://pixijs.com/assets/bunny.png" >>= newSprite
+    let loc = "https://haskell.foundation/assets/images/logos/hf-logo-100-alpha.png"
+    sprite <- loadAsset loc >>= newSprite
     setProperty "eventMode" sprite (stringAsVal "static")
     setAnchor sprite 0.5
     let initial_ball = BallState { ballX = fromIntegral screen_width / 2.0,
@@ -271,4 +272,18 @@ main = do
     -- Update ball physics and computer paddle AI
     callAddTicker game_ticker =<< jsFuncFromHs_ (fallSprite ball_state_ref score_state_ref (fromIntegral screen_width, fromIntegral screen_height) sprite bottom_paddle top_paddle score_text)
     callAddTicker game_ticker =<< jsFuncFromHs_ (updateComputerPaddle ball_state_ref (fromIntegral screen_width) top_paddle)
-    startTicker game_ticker
+    -- Don't start the game ticker yet - wait for user click
+
+    -- "Click to start" message
+    start_text <- newText "Click to start" "white"
+    setProperty "eventMode" start_text (stringAsVal "static")
+    setProperty "hitArea" start_text =<< getProperty "screen" app
+    setAnchor start_text 0.5
+    setProperty "x" start_text (floatAsVal $ fromIntegral screen_width / 2.0)
+    setProperty "y" start_text (floatAsVal $ fromIntegral screen_height / 2.0 - 50.0)
+    addChild app start_text
+
+    -- Start game on pointerdown
+    addEventListener "pointerdown" start_text =<< jsFuncFromHs_
+     (\_ -> do startTicker game_ticker
+               setProperty "text" start_text $ stringAsVal $ toJSString "")
