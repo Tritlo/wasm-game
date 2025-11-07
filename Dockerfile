@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Europe/Stockholm \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
-    USER_NAME=tharkun \
+    USER_NAME=matti \
     UID=1001 \
     GID=1001
 

@@ -16,7 +16,7 @@ license-file:       LICENSE
 author:             Matthias Pall Gissurarson
 
 -- An email address to which users can send suggestions, bug reports, and patches.
-maintainer:         matti@tharkun.se
+maintainer:        mpg@mpg.is
 
 -- A copyright notice.
 -- copyright:
@@ -30,11 +30,11 @@ extra-doc-files:    CHANGELOG.md
 extra-source-files:
     README.md
 
-homepage:       https://github.com/Tharkun/test
+homepage:       https://github.mpg.is/wasm-game
 
 source-repository head
   type:     git
-  location: https://github.com/TharkunAB/test.git
+  location: https://github.com/Tritlo/wasm-game.git
 
 common warnings
     ghc-options: -Wall

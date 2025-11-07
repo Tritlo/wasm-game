@@ -45,8 +45,16 @@ foreign import javascript safe
  """
  initApp :: JSVal -> JSString -> IO JSVal
 
-
-
+-- | Initializes a PIXI.js Application with the given background color and resizes it to a target element.
+--
+-- This function uses a safe import because it needs to await the result of
+-- the init function. The init function has side-effects on the app object,
+-- which we need to capture.
+--
+-- @param app The PIXI Application object to initialize
+-- @param backgroundColor The background color as a JavaScript string (e.g., "0x000000")
+-- @param targetSelector The CSS selector for the target element to resize to (e.g., "#canvas-container")
+-- @return The initialized application object
 foreign import javascript safe
  """
   const r = await $1.init({background: $2, resizeTo: document.querySelector($3)});
@@ -63,9 +71,10 @@ foreign import javascript unsafe "document.body.appendChild($1.canvas)"
     appendCanvas :: JSVal -> IO ()
 
 
--- | Appends the application's canvas to the document body.
--- This makes the PIXI.js canvas visible in the target element.
+-- | Appends the application's canvas to a target element specified by a CSS selector.
+-- This makes the PIXI.js canvas visible in the specified target element.
 --
+-- @param targetSelector The CSS selector for the target element (e.g., "#canvas-container")
 -- @param app The PIXI Application object whose canvas should be appended
 foreign import javascript unsafe "document.querySelector($1).appendChild($2.canvas)"
     appendToTarget :: JSString -> JSVal -> IO ()
