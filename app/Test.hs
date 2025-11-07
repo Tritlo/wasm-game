@@ -28,6 +28,11 @@ data State = State {
     mouseY :: Float
 }
 
+data ScoreState = ScoreState {
+    playerScore :: Int,
+    computerScore :: Int
+}
+
 type Screen = (Float, Float)
 type Paddle = (Float, Float, Float)
 
@@ -89,7 +94,9 @@ checkPaddleCollision ball_x ball_y (paddle_x, paddle_y, paddle_width) ball_movin
     in (collision, hit_position)
 
 -- | Update ball state based on physics and collisions
-updateBallState :: BallState -> Float -> Screen -> Paddle -> Paddle -> BallState
+-- Returns: (updated_ball_state, scoring_event)
+-- scoring_event: Just True = player scored, Just False = computer scored, Nothing = no score
+updateBallState :: BallState -> Float -> Screen -> Paddle -> Paddle -> (BallState, Maybe Bool)
 updateBallState ball dt (screen_width, screen_height) bottom_paddle top_paddle =
     let new_y = ball.ballY + ball.ballYSpeed * dt
         new_x = ball.ballX + ball.ballXSpeed * dt
@@ -103,28 +110,27 @@ updateBallState ball dt (screen_width, screen_height) bottom_paddle top_paddle =
     if bottom_collision then
         -- Bounce off bottom paddle with angle based on hit position (ball goes up)
         let (new_x_speed, new_y_speed) = calculatePaddleBounce bottom_hit_pos base_speed False
-        in ball { ballX = new_x, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
+        in (ball { ballX = new_x, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }, Nothing)
     else if top_collision then
         -- Bounce off top paddle with angle based on hit position (ball goes down)
         let (new_x_speed, new_y_speed) = calculatePaddleBounce top_hit_pos base_speed True
-        in ball { ballX = new_x, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
+        in (ball { ballX = new_x, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }, Nothing)
     else if new_y < 0.0 then
-        -- Top edge: bounce based on angle (reflect Y component, preserve X)
-        let (new_x_speed, new_y_speed) = reflectVelocity ball.ballXSpeed ball.ballYSpeed True
-        in ball { ballX = new_x, ballY = 0.0, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
+        -- Top edge: player scores, reset ball going toward player (downward)
+        (ball { ballX = screen_width / 2.0, ballY = screen_height / 2.0, ballXSpeed = 2.0, ballYSpeed = 5.0 }, Just True)
     else if new_y > screen_height then
-        -- Bottom edge: reset ball to center
-        ball { ballX = screen_width / 2.0, ballY = screen_height / 2.0, ballXSpeed = 2.0, ballYSpeed = 5.0 }
+        -- Bottom edge: computer scores, reset ball going toward computer (upward)
+        (ball { ballX = screen_width / 2.0, ballY = screen_height / 2.0, ballXSpeed = 2.0, ballYSpeed = -5.0 }, Just False)
     else if new_x < 0.0 then
         -- Left edge: bounce based on angle (reflect X component, preserve Y)
         let (new_x_speed, new_y_speed) = reflectVelocity ball.ballXSpeed ball.ballYSpeed False
-        in ball { ballX = 0.0, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
+        in (ball { ballX = 0.0, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }, Nothing)
     else if new_x > screen_width then
         -- Right edge: bounce based on angle (reflect X component, preserve Y)
         let (new_x_speed, new_y_speed) = reflectVelocity ball.ballXSpeed ball.ballYSpeed False
-        in ball { ballX = screen_width, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }
+        in (ball { ballX = screen_width, ballY = new_y, ballXSpeed = new_x_speed, ballYSpeed = new_y_speed }, Nothing)
     else
-        ball { ballX = new_x, ballY = new_y }
+        (ball { ballX = new_x, ballY = new_y }, Nothing)
 
 
 -- | AI function to move computer paddle towards ball
@@ -141,9 +147,15 @@ updateComputerPaddle ball_state_ref screen_width computer_paddle ticker = do
         new_x = max 0.0 $ min (screen_width) (current_paddle_x + move)
     setProperty "x" computer_paddle (floatAsVal new_x)
 
+-- | Update score display
+updateScoreDisplay :: ScoreState -> JSVal -> IO ()
+updateScoreDisplay score score_text = do
+    let score_str = show score.playerScore ++ " - " ++ show score.computerScore
+    setProperty "text" score_text (stringAsVal $ toJSString score_str)
+
 -- | Move sprite downward with constant speed and respawn at center if it falls out
-fallSprite :: IORef BallState -> Screen -> JSVal -> JSVal -> JSVal -> JSVal -> IO ()
-fallSprite ball_state_ref screen sprite bottom_paddle top_paddle ticker = do
+fallSprite :: IORef BallState -> IORef ScoreState -> Screen -> JSVal -> JSVal -> JSVal -> JSVal -> JSVal -> IO ()
+fallSprite ball_state_ref score_state_ref screen sprite bottom_paddle top_paddle score_text ticker = do
     ball_state <- readIORef ball_state_ref
     dt <- valAsFloat <$> getProperty "deltaTime" ticker
     bottom_paddle_x <- valAsFloat <$> getProperty "x" bottom_paddle
@@ -152,11 +164,24 @@ fallSprite ball_state_ref screen sprite bottom_paddle top_paddle ticker = do
     top_paddle_x <- valAsFloat <$> getProperty "x" top_paddle
     top_paddle_y <- valAsFloat <$> getProperty "y" top_paddle
     top_paddle_width <- valAsFloat <$> getProperty "width" top_paddle
-    let updated_ball = updateBallState ball_state dt screen
+    let (updated_ball, scoring_event) = updateBallState ball_state dt screen
                                       (bottom_paddle_x, bottom_paddle_y, bottom_paddle_width)
                                       (top_paddle_x, top_paddle_y, top_paddle_width)
     writeIORef ball_state_ref updated_ball
     renderBall updated_ball sprite
+    -- Handle scoring
+    case scoring_event of
+        Just True -> do  -- Player scored
+            score <- readIORef score_state_ref
+            let new_score = score { playerScore = score.playerScore + 1 }
+            writeIORef score_state_ref new_score
+            updateScoreDisplay new_score score_text
+        Just False -> do  -- Computer scored
+            score <- readIORef score_state_ref
+            let new_score = score { computerScore = score.computerScore + 1 }
+            writeIORef score_state_ref new_score
+            updateScoreDisplay new_score score_text
+        Nothing -> return ()
 
 
 
@@ -178,8 +203,10 @@ main = do
                                    ballYSpeed = 5.0 }
         initial_state = State { mouseX = fromIntegral screen_width / 2.0,
                                mouseY = fromIntegral screen_height / 2.0 }
+        initial_score = ScoreState { playerScore = 0, computerScore = 0 }
     ball_state_ref <- newIORef initial_ball
     state_ref <- newIORef initial_state
+    score_state_ref <- newIORef initial_score
     renderBall initial_ball sprite
     addChild app sprite
     fps_counter <- newText "0" "white"
@@ -225,6 +252,13 @@ main = do
     setProperty "y" top_paddle (floatAsVal 100.0)
     addChild app top_paddle
 
+    -- Score display (top right corner)
+    score_text <- newText "0 - 0" "white"
+    setProperty "x" score_text (floatAsVal $ fromIntegral screen_width - 100.0)
+    setProperty "y" score_text (floatAsVal 10.0)
+    addChild app score_text
+    updateScoreDisplay initial_score score_text
+
     -- Update ball physics and computer paddle AI
-    addTicker app =<< jsFuncFromHs_ (fallSprite ball_state_ref (fromIntegral screen_width, fromIntegral screen_height) sprite bottom_paddle top_paddle)
+    addTicker app =<< jsFuncFromHs_ (fallSprite ball_state_ref score_state_ref (fromIntegral screen_width, fromIntegral screen_height) sprite bottom_paddle top_paddle score_text)
     addTicker app =<< jsFuncFromHs_ (updateComputerPaddle ball_state_ref (fromIntegral screen_width) top_paddle)
