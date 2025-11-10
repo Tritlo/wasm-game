@@ -98,32 +98,57 @@ newJSVal: (v) => __ghc_wasm_jsffi_jsval_manager.newJSVal(v),
 getJSVal: (k) => __ghc_wasm_jsffi_jsval_manager.getJSVal(k),
 freeJSVal: (k) => __ghc_wasm_jsffi_jsval_manager.freeJSVal(k),
 scheduleWork: () => setImmediate(__exports.rts_schedulerLoop),
-ZC0ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2,$3) => ($2.on($1, $3)),
-ZC1ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2,$3) => ($2[$1] += $3),
-ZC2ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => ($1),
-ZC4ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => ($1),
+ZC1ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ((() => {
+  const handle = $1;
+  const axisIndex = $2;
+  if (handle && handle.axes && handle.axes[axisIndex] !== undefined) {
+    return handle.axes[axisIndex];
+  }
+  return 0.0;
+})()),
+ZC2ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async () => ((() => {
+  if (navigator.getGamepads) {
+    const pads = navigator.getGamepads();
+    for (let i = 0; i < pads.length; i++) {
+      if (pads[i] !== null && pads[i].mapping === 'standard') {
+        return pads[i];
+      }
+    }
+    // If no standard-mapped pad, return the first non-null pad
+    for (let i = 0; i < pads.length; i++) {
+      if (pads[i] !== null) {
+        return pads[i];
+      }
+    }
+  }
+  return null;
+})()),
+ZC3ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2,$3) => ($2.on($1, $3)),
+ZC4ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2,$3) => ($2[$1] += $3),
 ZC5ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => ($1),
+ZC7ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => ($1),
 ZC8ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => ($1),
-ZC9ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => ($1),
-ZC10ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2,$3) => ($2[$1] = $3),
-ZC11ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2) => ($2[$1]),
-ZC13ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => ((...args) => __exports.ghczuwasmzujsffiZC12ZCtestzm0zi3zi0zi0zminplaceZCLibZC($1, ...args)),
-ZC14ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => ($1.start()),
-ZC15ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.add($2)),
-ZC16ZCtestzm0zi3zi0zi0zminplaceZCLibZC: () => (new PIXI.Ticker()),
-ZC17ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.ticker.add($2)),
-ZC19ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.stage.addChild($2)),
-ZC20ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.anchor.set($2)),
-ZC21ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => (blip($1)),
-ZC23ZCtestzm0zi3zi0zi0zminplaceZCLibZC: () => (blip()),
-ZC24ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => (PIXI.Texture[$1]),
-ZC25ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => (new PIXI.Sprite($1)),
-ZC26ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => {const texture = await Assets.load($1); return texture},
-ZC28ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => (document.querySelector($1).appendChild($2.canvas)),
-ZC30ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2,$3) => {const r = await $1.init({background: $2, resizeTo: document.querySelector($3)});
+ZC11ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => ($1),
+ZC12ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => ($1),
+ZC13ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2,$3) => ($2[$1] = $3),
+ZC14ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2) => ($2[$1]),
+ZC16ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => ((...args) => __exports.ghczuwasmzujsffiZC15ZCtestzm0zi3zi0zi0zminplaceZCLibZC($1, ...args)),
+ZC17ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => ($1.start()),
+ZC18ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.add($2)),
+ZC19ZCtestzm0zi3zi0zi0zminplaceZCLibZC: () => (new PIXI.Ticker()),
+ZC20ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.ticker.add($2)),
+ZC22ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.stage.addChild($2)),
+ZC23ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => ($1.anchor.set($2)),
+ZC24ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => (blip($1)),
+ZC26ZCtestzm0zi3zi0zi0zminplaceZCLibZC: () => (blip()),
+ZC27ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => (PIXI.Texture[$1]),
+ZC28ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1) => (new PIXI.Sprite($1)),
+ZC29ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1) => {const texture = await Assets.load($1); return texture},
+ZC31ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => (document.querySelector($1).appendChild($2.canvas)),
+ZC33ZCtestzm0zi3zi0zi0zminplaceZCLibZC: async ($1,$2,$3) => {const r = await $1.init({background: $2, resizeTo: document.querySelector($3)});
 return $1},
-ZC32ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => (new PIXI.Text({text: $1, style: {fill: $2 }})),
-ZC33ZCtestzm0zi3zi0zi0zminplaceZCLibZC: () => (new PIXI.Application()),
+ZC35ZCtestzm0zi3zi0zi0zminplaceZCLibZC: ($1,$2) => (new PIXI.Text({text: $1, style: {fill: $2 }})),
+ZC36ZCtestzm0zi3zi0zi0zminplaceZCLibZC: () => (new PIXI.Application()),
 ZC0ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1,$2) => ($1.reject(new WebAssembly.RuntimeError($2))),
 ZC18ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1,$2) => ($1.resolve($2)),
 ZC19ZCghczminternalZCGHCziInternalziWasmziPrimziExportsZC: ($1) => ($1.resolve()),

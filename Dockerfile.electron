@@ -1,0 +1,74 @@
+# Dockerfile for building Electron app
+FROM node:20-slim
+
+# Install system dependencies for Electron
+RUN apt-get update && apt-get install -y \
+    unzip \
+    ca-certificates \
+    binutils \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libxss1 \
+    libasound2 \
+    libgtk-3-0 \
+    libgdk-pixbuf2.0-0 \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Wine for cross-platform Windows builds
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
+    apt-get install -y wine64 wine32 && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install Node dependencies (all dependencies installed in Docker)
+RUN npm install --production=false
+
+# Set up cache directories for Electron and electron-builder binaries
+ENV ELECTRON_CACHE=/root/.cache/electron
+ENV ELECTRON_BUILDER_CACHE=/root/.cache/electron-builder
+RUN mkdir -p "$ELECTRON_CACHE" "$ELECTRON_BUILDER_CACHE"
+
+# Copy application files (needed for electron-builder to run)
+COPY electron/ ./electron/
+COPY index.html ./
+COPY test.wasm ./
+COPY ghc_wasm_jsffi.js ./
+COPY vendor/ ./vendor/
+COPY assets/ ./assets/
+
+# Initialize Wine (required for Windows builds)
+# Use DISPLAY=none to avoid GUI prompts, and set wineprefix
+ENV WINEPREFIX=/root/.wine \
+    DISPLAY=:0.0 \
+    WINEARCH=win64
+RUN winecfg -v win10 2>&1 | head -5 || true && \
+    echo "Wine initialized"
+
+# Pre-download all electron-builder binaries for both Linux and Windows
+# The --dir flag creates unpacked directories (triggering downloads) but not final distributables
+# We clean up the unpacked dirs afterward, keeping only the cached binaries
+RUN echo "Pre-downloading electron-builder binaries..." && \
+    # Run electron-builder --dir for Linux (downloads Electron, AppImage tools, fpm)
+    npx electron-builder --linux --dir --x64 > /tmp/build-linux.log 2>&1 || true && \
+    # Run electron-builder --dir for Windows (downloads Electron, NSIS, winCodeSign)
+    npx electron-builder --win --dir --x64 > /tmp/build-win.log 2>&1 || true && \
+    # Clean up unpacked directories (we only want the cached binaries, not the built app)
+    rm -rf dist/linux-unpacked dist/win-unpacked 2>/dev/null || true && \
+    echo "Binary pre-download complete"
+
+# Build Electron app for both Linux and Windows
+# Disable code signing for Windows builds (not needed for development)
+ENV CSC_IDENTITY_AUTO_DISCOVERY=false
+
+CMD ["sh", "-c", "npm run electron:build -- --linux --win"]

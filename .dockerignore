@@ -1,5 +1,3 @@
 *.hi
 *.o
 dist-newstyle
-*.wasm
-*.js

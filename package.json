@@ -1,0 +1,68 @@
+{
+  "name": "ghc-wasm-pong",
+  "version": "0.1.0",
+  "description": "Haskell WASM Pong game packaged as Electron app",
+  "author": {
+    "name": "Matthias Pall Gissurarson",
+    "email": "mpg@mpg.is"
+  },
+  "homepage": "https://github.com/Tritlo/wasm-game",
+  "main": "electron/main.js",
+  "scripts": {
+    "vendor:download": "./scripts/vendor-dependencies.sh",
+    "electron:dev": "electron .",
+    "electron:build": "electron-builder",
+    "electron:pack": "electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.ghcwasm.pong",
+    "productName": "GHC WASM Pong",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "index.html",
+      "test.wasm",
+      "ghc_wasm_jsffi.js",
+      "vendor/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Game",
+      "maintainer": "Matthias Pall Gissurarson <mpg@mpg.is>"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  }
+}

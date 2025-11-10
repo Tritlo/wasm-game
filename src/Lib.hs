@@ -342,3 +342,55 @@ instance IsString JSString where
 -- @param obj The JavaScript object to add the event listener to
 foreign import javascript unsafe "$2.on($1, $3)"
   addEventListener :: JSString -> JSVal -> JSFunction -> IO ()
+
+-- *****************************************************************************
+-- * Gamepad Functions (Browser Gamepad API)
+-- *****************************************************************************
+
+-- | Gets the first connected gamepad, or null if none connected.
+-- Uses browser Gamepad API. Filters for standard mapping gamepads.
+foreign import javascript safe
+  """
+  (() => {
+    if (navigator.getGamepads) {
+      const pads = navigator.getGamepads();
+      for (let i = 0; i < pads.length; i++) {
+        if (pads[i] !== null && pads[i].mapping === 'standard') {
+          return pads[i];
+        }
+      }
+      // If no standard-mapped pad, return the first non-null pad
+      for (let i = 0; i < pads.length; i++) {
+        if (pads[i] !== null) {
+          return pads[i];
+        }
+      }
+    }
+    return null;
+  })()
+  """
+    getFirstGamepad :: IO JSVal
+
+-- | Gets a gamepad axis value using browser Gamepad API.
+-- @param gamepadHandle The gamepad object from browser Gamepad API
+-- @param axisIndex The axis index (0 = left stick X, 1 = left stick Y, etc.)
+-- @return The axis value, or 0.0 if gamepad is null or axis doesn't exist
+foreign import javascript unsafe
+  """
+  (() => {
+    const handle = $1;
+    const axisIndex = $2;
+    if (handle && handle.axes && handle.axes[axisIndex] !== undefined) {
+      return handle.axes[axisIndex];
+    }
+    return 0.0;
+  })()
+  """
+    getGamepadAxis :: JSVal -> Int -> IO Float
+
+-- | Checks if a gamepad button is pressed using browser Gamepad API.
+-- @param gamepadHandle The gamepad object from browser Gamepad API
+-- @param buttonIndex The button index
+-- @return True if button is pressed, False otherwise
+foreign import javascript unsafe "($1 && $1.buttons && $1.buttons[$2]) ? $1.buttons[$2].pressed : false"
+    isGamepadButtonPressed :: JSVal -> Int -> IO Bool

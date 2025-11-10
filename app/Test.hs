@@ -3,7 +3,7 @@
 -- | Pong game implementation using PIXI.js and GHC WebAssembly backend.
 --
 -- This module implements a classic Pong game where:
--- - The player controls the bottom paddle with mouse movement
+-- - The player controls the bottom paddle with mouse movement or gamepad (left stick X axis)
 -- - The computer AI controls the top paddle
 -- - The ball bounces off paddles and walls with physics-based collision detection
 -- - Scoring occurs when the ball passes a paddle
@@ -298,6 +298,34 @@ updateScoreDisplay score score_text = do
     let score_str = show score.playerScore ++ " - " ++ show score.computerScore
     setProperty "text" score_text (stringAsVal $ toJSString score_str)
 
+-- | Updates player paddle position based on gamepad input.
+--
+-- Polls gamepad state and updates paddle position using left stick X axis.
+-- Falls back to current position if no gamepad input is detected.
+--
+-- @param paddle The player's paddle sprite
+-- @param screen_width Screen width for boundary checking
+-- @param dt Delta time for smooth movement
+updatePlayerPaddle :: JSVal -> Float -> Float -> IO ()
+updatePlayerPaddle paddle screen_width dt = do
+    -- Poll gamepad state
+    gamepad <- getFirstGamepad
+    gamepad_x <- getGamepadAxis gamepad 0  -- Left stick X axis
+
+    -- Apply deadzone to avoid drift
+    let deadzone = 0.15
+    let gamepad_x' = if abs gamepad_x < deadzone then 0.0 else gamepad_x
+
+    -- Only update if gamepad input is active
+    when (abs gamepad_x' > 0.0) $ do
+        current_x <- valAsFloat <$> getProperty "x" paddle
+        -- Gamepad movement speed (pixels per second per unit of axis input)
+        -- Reduced significantly for less sensitive control
+        let paddle_speed = 25.0
+        let move = gamepad_x' * paddle_speed * dt
+        let new_x = max 0.0 $ min screen_width (current_x + move)
+        setProperty "x" paddle (floatAsVal new_x)
+
 -- | Main game update function called on each tick.
 --
 -- Updates ball physics, handles collisions, renders the ball, plays sounds,
@@ -315,6 +343,11 @@ updateGamePhysics :: IORef BallState -> IORef ScoreState -> Screen -> JSVal -> J
 updateGamePhysics ball_state_ref score_state_ref screen sprite bottom_paddle top_paddle score_text ticker = do
     ball_state <- readIORef ball_state_ref
     dt <- valAsFloat <$> getProperty "deltaTime" ticker
+
+    -- Update player paddle with gamepad input
+    let (screen_width, _) = screen
+    updatePlayerPaddle bottom_paddle screen_width dt
+
     -- Get paddle positions and dimensions
     bottom_paddle_x <- valAsFloat <$> getProperty "x" bottom_paddle
     bottom_paddle_y <- valAsFloat <$> getProperty "y" bottom_paddle
@@ -371,13 +404,14 @@ createPaddle app x y = do
     addChild app paddle
     return paddle
 
--- | Sets up the player paddle with mouse control.
+-- | Sets up the player paddle with mouse and gamepad control.
 --
 -- @param app The PIXI application
 -- @param paddle The paddle sprite to control
 -- @param screen_width Screen width for boundary checking
 setupPlayerPaddle :: JSVal -> JSVal -> Int -> IO ()
 setupPlayerPaddle app paddle screen_width = do
+    -- Mouse control
     addEventListener "globalpointermove" paddle =<< jsFuncFromHs_
       (\event -> do
             mx <- valAsFloat <$> getPropertyKey ["screen", "x"] event
@@ -484,7 +518,7 @@ main = do
     screen_height <- valAsInt <$> getProperty "height" screen
 
     -- Load ball sprite
-    let ball_image_url = "https://haskell.foundation/assets/images/logos/hf-logo-100-alpha.png"
+    let ball_image_url = "./assets/images/logos/hf-logo-100-alpha.png"
     sprite <- loadAsset ball_image_url >>= newSprite
     setProperty "eventMode" sprite (stringAsVal "static")
     setAnchor sprite 0.5
