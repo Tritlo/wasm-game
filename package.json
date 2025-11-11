@@ -1,7 +1,7 @@
 {
-  "name": "ghc-wasm-pong",
-  "version": "0.1.0",
-  "description": "Haskell WASM Pong game packaged as Electron app",
+  "name": "gwp",
+  "version": "0.3.0",
+  "description": "Haskell WASM game packaged as Electron app with Steamworks support",
   "author": {
     "name": "Matthias Pall Gissurarson",
     "email": "mpg@mpg.is"
@@ -15,8 +15,8 @@
     "electron:pack": "electron-builder --dir"
   },
   "build": {
-    "appId": "com.ghcwasm.pong",
-    "productName": "GHC WASM Pong",
+    "appId": "is.mpg.gwp",
+    "productName": "gwp",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -26,16 +26,20 @@
       "index.html",
       "test.wasm",
       "ghc_wasm_jsffi.js",
-      "vendor/**/*",
       "assets/**/*",
-      "package.json"
+      "vendor/**/*",
+      "package.json",
+      "steam_appid.txt",
+      "node_modules/steamworks.js/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "steam_appid.txt",
+        "to": "steam_appid.txt"
+      }
     ],
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": ["x64"]
-        },
         {
           "target": "portable",
           "arch": ["x64"]
@@ -45,21 +49,23 @@
     "linux": {
       "target": [
         {
-          "target": "AppImage",
-          "arch": ["x64"]
-        },
-        {
-          "target": "deb",
+          "target": "tar.gz",
           "arch": ["x64"]
         }
       ],
       "category": "Game",
-      "maintainer": "Matthias Pall Gissurarson <mpg@mpg.is>"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "maintainer": "Matthias Pall Gissurarson <mpg@mpg.is>",
+      "executableName": "gwp",
+      "extraFiles": [
+        {
+          "from": "build/run.sh",
+          "to": "run.sh"
+        }
+      ]
     }
+  },
+  "dependencies": {
+    "steamworks.js": "^0.4.0"
   },
   "devDependencies": {
     "electron": "^28.0.0",

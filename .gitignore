@@ -2,5 +2,5 @@
 *.o
 dist-newstyle
 *.wasm
-*.js
+public/*.js
 dist/

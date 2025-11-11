@@ -46,6 +46,8 @@ COPY test.wasm ./
 COPY ghc_wasm_jsffi.js ./
 COPY vendor/ ./vendor/
 COPY assets/ ./assets/
+COPY steam_appid.txt ./
+COPY build/run.sh ./build/run.sh
 
 # Initialize Wine (required for Windows builds)
 # Use DISPLAY=none to avoid GUI prompts, and set wineprefix

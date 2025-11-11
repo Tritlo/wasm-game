@@ -96,7 +96,7 @@
 
     .status {
       position: absolute;
-      top: 10px;
+      bottom: 10px;
       left: 10px;
       z-index: 1000;
       background: rgba(0, 0, 0, 0.7);
@@ -171,6 +171,24 @@
     import { WASI } from "./vendor/@runno/wasi@0.7.0/dist/wasi.js";
     import ghc_wasm_jsffi from "./ghc_wasm_jsffi.js";
 
+    // Initialize Steamworks if available (Electron context)
+    let steamworksReady = false;
+
+    if (window.steamworks) {
+      window.steamworks.isInitialized().then(async (initialized) => {
+        steamworksReady = initialized;
+        if (initialized) {
+          console.log('Steamworks initialized');
+          // Example: Get Steam user info
+          window.steamworks.getPersonaName().then((name) => {
+            console.log('Steam user:', name);
+          });
+        } else {
+          console.log('Steamworks not available (Steam may not be running)');
+        }
+      });
+    }
+
     // Enable gamepad API - required for Electron/Windows
     // Gamepads need to be activated through user interaction or event listeners
     window.addEventListener('gamepadconnected', (e) => {
@@ -202,6 +220,7 @@
     window.Application = PIXI.Application;
     window.Sprite = PIXI.Sprite;
     window.Assets = PIXI.Assets;
+    window.AnimatedSprite = PIXI.AnimatedSprite;
     window.HTMLText = PIXI.HTMLText;
 
     const audio_context = new AudioContext();

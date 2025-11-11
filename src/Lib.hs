@@ -19,6 +19,14 @@ import Data.String (IsString(..))
 -- that can be passed between Haskell and JavaScript.
 type JSFunction = JSVal
 
+type PixiApp = JSVal
+type PixiSprite = JSVal
+type PixiContainer = JSVal
+type PixiTexture = JSVal
+type PixiTicker = JSVal
+type PixiText = JSVal
+type PixiTimeDelta = JSVal
+
 -- *****************************************************************************
 -- * PIXI.js Application Functions
 -- *****************************************************************************
@@ -27,7 +35,7 @@ type JSFunction = JSVal
 -- This creates a new PIXI Application object without initializing it.
 -- Use 'initApp' to initialize the application with configuration options.
 foreign import javascript unsafe "new PIXI.Application()"
-   newApp :: IO JSVal
+   newApp :: IO PixiApp
 
 -- | Creates a new PIXI.js Text object with the specified text and fill color.
 --
@@ -35,7 +43,7 @@ foreign import javascript unsafe "new PIXI.Application()"
 -- @param fillColor The fill color as a JavaScript string (e.g., "white", "#FF0000")
 -- @return A new Text object
 foreign import javascript unsafe "new PIXI.Text({text: $1, style: {fill: $2 }})"
-   newText :: JSString -> JSString -> IO JSVal
+   newText :: JSString -> JSString -> IO PixiText
 
 -- | Initializes a PIXI.js Application with the given background color.
 --
@@ -48,10 +56,10 @@ foreign import javascript unsafe "new PIXI.Text({text: $1, style: {fill: $2 }})"
 -- @return The initialized application object
 foreign import javascript safe
  """
-  const r = await $1.init({background: $2, resizeTo: window});
+  const r = await $1.init({background: $2, resizeTo: window, preference: "webgl"});
   return $1
  """
- initApp :: JSVal -> JSString -> IO JSVal
+ initApp :: PixiApp -> JSString -> IO PixiApp
 
 -- | Initializes a PIXI.js Application with the given background color and resizes it to a target element.
 --
@@ -65,10 +73,10 @@ foreign import javascript safe
 -- @return The initialized application object
 foreign import javascript safe
  """
-  const r = await $1.init({background: $2, resizeTo: document.querySelector($3)});
+  const r = await $1.init({background: $2, resizeTo: document.querySelector($3), preference: "webgl"});
   return $1
-  """
-    initAppInTarget :: JSVal -> JSString -> JSString -> IO JSVal
+ """
+    initAppInTarget :: PixiApp -> JSString -> JSString -> IO PixiApp
 
 
 -- | Appends the application's canvas to the document body.
@@ -76,7 +84,7 @@ foreign import javascript safe
 --
 -- @param app The PIXI Application object whose canvas should be appended
 foreign import javascript unsafe "document.body.appendChild($1.canvas)"
-    appendCanvas :: JSVal -> IO ()
+    appendCanvas :: PixiApp -> IO ()
 
 
 -- | Appends the application's canvas to a target element specified by a CSS selector.
@@ -85,7 +93,7 @@ foreign import javascript unsafe "document.body.appendChild($1.canvas)"
 -- @param targetSelector The CSS selector for the target element (e.g., "#canvas-container")
 -- @param app The PIXI Application object whose canvas should be appended
 foreign import javascript unsafe "document.querySelector($1).appendChild($2.canvas)"
-    appendToTarget :: JSString -> JSVal -> IO ()
+    appendToTarget :: JSString -> PixiApp -> IO ()
 -- *****************************************************************************
 -- * Console Logging
 -- *****************************************************************************
@@ -114,7 +122,7 @@ consoleLogShow = consoleLogVal . stringAsVal . toJSString . show
 -- @param path The path to the asset as a JavaScript string
 -- @return The loaded texture as a JSVal
 foreign import javascript safe "const texture = await Assets.load($1); return texture"
-    loadAsset :: JSString -> IO JSVal
+    loadAsset :: JSString -> IO PixiTexture
 
 -- *****************************************************************************
 -- * Sprite Functions
@@ -125,7 +133,16 @@ foreign import javascript safe "const texture = await Assets.load($1); return te
 -- @param texture The texture to use for the sprite
 -- @return A new Sprite object
 foreign import javascript unsafe "new PIXI.Sprite($1)"
-    newSprite :: JSVal -> IO JSVal
+    newSprite :: PixiTexture -> IO PixiSprite
+
+foreign import javascript unsafe "new PIXI.AnimatedSprite($1)"
+    newAnimatedSprite :: PixiTexture -> IO PixiSprite
+
+foreign import javascript unsafe "$1.play()"
+    playAnimatedSprite :: PixiSprite -> IO ()
+
+foreign import javascript unsafe "window[$1] = $2"
+    setGlobalVariable :: JSString -> JSVal -> IO ()
 
 -- | Gets a base texture from PIXI's built-in texture cache.
 --
@@ -168,13 +185,61 @@ foreign import javascript unsafe "blip($1)"
 foreign import javascript unsafe "$1.anchor.set($2)"
     setAnchor :: JSVal -> Float -> IO ()
 
+foreign import javascript unsafe "$1.scale.set($2)"
+    setScale :: JSVal -> Float -> IO ()
+
+foreign import javascript unsafe
+   """
+   $1.view.tabIndex = 0;
+   $1.view.focus();
+   """
+    setFocus :: JSVal -> IO ()
+
+foreign import javascript unsafe
+   """
+   $2.view.addEventListener($1, (e) => {
+      $3(e.key);
+   });
+   """
+   viewAddListener :: JSString -> PixiSprite -> JSFunction -> IO ()
+
+
 -- | Adds a child object to the application's stage.
 -- This makes the child visible in the renderer.
 --
 -- @param app The PIXI Application object
 -- @param child The child object (e.g., a Sprite) to add to the stage
 foreign import javascript unsafe "$1.stage.addChild($2)"
-    addChild :: JSVal -> JSVal -> IO ()
+    addChild :: PixiApp -> PixiSprite -> IO ()
+
+
+-- *****************************************************************************
+-- * Container Functions
+-- *****************************************************************************
+
+-- | Creates a new PIXI.js Container.
+-- Containers can hold multiple sprites and be moved together for camera effects.
+--
+-- @return A new Container object
+foreign import javascript unsafe "new PIXI.Container()"
+    newContainer :: IO PixiContainer
+
+-- | Adds a child object to a container (or stage).
+-- This makes the child visible within the container.
+--
+-- @param parent The container or app stage to add the child to
+-- @param child The child object (e.g., a Sprite) to add
+foreign import javascript unsafe "$1.addChild($2)"
+    addChildToContainer :: PixiContainer -> PixiSprite -> IO ()
+
+-- | Sets the position of a container or sprite.
+-- For containers, this is used to implement camera following.
+--
+-- @param obj The container or sprite to position
+-- @param x The x coordinate
+-- @param y The y coordinate
+foreign import javascript unsafe "$1.position.set($2, $3)"
+    setPosition :: PixiContainer -> Float -> Float -> IO ()
 
 
 -- *****************************************************************************
@@ -196,7 +261,7 @@ foreign import javascript unsafe "$1($2)"
 -- @param app The PIXI Application object
 -- @param func The function to call on each tick
 foreign import javascript unsafe "$1.ticker.add($2)"
-    addTicker :: JSVal -> JSFunction -> IO ()
+    addTicker :: PixiTicker -> JSFunction -> IO ()
 
 -- | Creates a new PIXI.js Ticker instance.
 --
@@ -205,7 +270,7 @@ foreign import javascript unsafe "$1.ticker.add($2)"
 --
 -- @return A new Ticker object
 foreign import javascript unsafe "new PIXI.Ticker()"
-    newTicker :: IO JSVal
+    newTicker :: IO PixiTicker
 
 -- | Adds a callback function to a ticker.
 --
@@ -214,13 +279,13 @@ foreign import javascript unsafe "new PIXI.Ticker()"
 -- @param ticker The ticker to add the callback to
 -- @param func The function to call on each tick
 foreign import javascript unsafe "$1.add($2)"
-    callAddTicker :: JSVal -> JSFunction -> IO ()
+    callAddTicker :: PixiTicker -> JSFunction -> IO ()
 
 -- | Starts a ticker, causing it to begin calling its callbacks.
 --
 -- @param ticker The ticker to start
 foreign import javascript unsafe "$1.start()"
-    startTicker :: JSVal -> IO ()
+    startTicker :: PixiTicker -> IO ()
 
 -- *****************************************************************************
 -- * JavaScript Interop Utilities
